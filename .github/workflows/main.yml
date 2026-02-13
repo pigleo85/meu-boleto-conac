@@ -1,0 +1,23 @@
+name: Agendamento de Boleto
+on:
+  schedule:
+    - cron: '0 12 5 * *' # Roda todo dia 05 às 09:00 AM (Horário de Brasília)
+  workflow_dispatch: # Isso ativa o botão de "Rodar agora" no celular
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Instalar Navegador
+        run: |
+          pip install playwright
+          playwright install chromium
+      - name: Executar Robô
+        env:
+          CONAC_EMAIL: ${{ secrets.CONAC_EMAIL }}
+        run: python conac_robot.py
