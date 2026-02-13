@@ -4,37 +4,50 @@ from playwright.sync_api import sync_playwright
 
 def run():
     with sync_playwright() as p:
+        # Lança o navegador
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+        page = context.new_page()
         
-        print("Iniciando acesso ao site da Conac...")
-        page.goto("https://conac.com.br/2-via-de-boleto/", wait_until="networkidle")
+        try:
+            print("Acessando o site...")
+            page.goto("https://conac.com.br/2-via-de-boleto/", wait_until="load", timeout=60000)
+            
+            # Espera o botão aparecer antes de clicar
+            print("Procurando botão 'Acesso Condomínio'...")
+            page.wait_for_selector("text=Acesso Condomínio", timeout=30000)
+            page.click("text=Acesso Condomínio")
+            
+            # Espera a página de login carregar
+            print("Digitando e-mail...")
+            page.wait_for_selector("input", timeout=30000)
+            # Tenta encontrar o campo de e-mail de forma mais genérica
+            page.keyboard.type(os.environ['CONAC_EMAIL'])
+            
+            print("Clicando em Continuar...")
+            page.get_by_text("Continuar").click()
+            
+            print("Clicando em Avançar...")
+            page.wait_for_timeout(3000) # Pausa de segurança
+            page.get_by_text("Avançar").click()
+            
+            print("Clicando em Boleto Eletrônico...")
+            page.wait_for_timeout(3000)
+            page.get_by_text("Boleto Eletrônico").click()
+            
+            print("Solicitando envio por e-mail...")
+            page.get_by_text("Receber por e-mail").click()
+            
+            time.sleep(10) # Tempo para o site processar o envio
+            print("Finalizado com sucesso!")
 
-        # Passo 1: Clicar em Acesso Condomínio
-        page.click("text=Acesso Condomínio")
-        page.wait_for_load_state("networkidle")
-
-        # Passo 2: Digitar o E-mail (usando o Segredo que você criou)
-        email_input = "input[type='email'], input[name='email'], .form-control"
-        # Aqui ele busca o nome exato que você salvou: CONAC_EMAIL
-        page.fill(email_input, os.environ['CONAC_EMAIL'])
-        
-        # Passo 3: Cliques de navegação
-        page.click("text=Continuar")
-        page.wait_for_load_state("networkidle")
-
-        page.click("text=Avançar")
-        page.wait_for_load_state("networkidle")
-
-        page.click("text=Boleto Eletrônico")
-        
-        # Passo 4: Finalização
-        print("Finalizando: Clicando em Receber por e-mail...")
-        page.click("text=Receber por e-mail")
-        
-        time.sleep(5)
-        print("Sucesso! O comando foi enviado.")
-        browser.close()
+        except Exception as e:
+            print(f"Ocorreu um erro: {e}")
+            # Tira um print do erro para a gente ver o que o robô estava vendo
+            page.screenshot(path="erro_print.png")
+            raise e
+        finally:
+            browser.close()
 
 if __name__ == "__main__":
     run()
