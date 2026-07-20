@@ -1,12 +1,14 @@
 name: Agendamento de Boleto
 on:
   schedule:
-    - cron: '0 12 5 * *' # Roda todo dia 05 às 09:00 AM (Horário de Brasília)
-  workflow_dispatch: # Isso ativa o botão de "Rodar agora" no celular
+    - cron: '0 9 5 * *' # Roda todo dia 05 às 06:00 AM (Horário de Brasília) - já antecipado para evitar a fila!
+  workflow_dispatch: # Mantém o seu botão no celular ativo
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Dá permissão para o robô atualizar o repositório e evitar o bloqueio de 60 dias
     steps:
       - uses: actions/checkout@v3
       - name: Setup Python
@@ -21,3 +23,13 @@ jobs:
         env:
           CONAC_EMAIL: ${{ secrets.CONAC_EMAIL }}
         run: python conac_robot.py
+        
+      # 🎯 O TRUQUE: Esse passo faz uma micro-alteração no repositório para mantê-lo ativo
+      - name: Manter Repositório Ativo (Evitar bloqueio de 60 dias)
+        run: |
+          date > ultimo_disparo.txt
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add ultimo_disparo.txt
+          git commit -m "Auto-update: Mantendo fluxo ativo" || exit 0
+          git push
