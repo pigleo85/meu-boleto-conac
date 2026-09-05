@@ -1,65 +1,66 @@
 import os
-import time
+import requests
 from playwright.sync_api import sync_playwright
+
+def enviar_telegram(caminho_pdf):
+    token = os.environ['TELEGRAM_TOKEN']
+    chat_id = os.environ['TELEGRAM_CHAT_ID']
+    
+    url = f"https://api.telegram.org/bot{token}/sendDocument"
+    caption = "📄 *Seu Boleto Conac do Mês Chegou!*"
+    
+    print("📤 Enviando boleto para o Telegram...")
+    with open(caminho_pdf, "rb") as file:
+        payload = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
+        files = {"document": file}
+        response = requests.post(url, data=payload, files=files)
+        
+    if response.status_code == 200:
+        print("✨ Boleto enviado com sucesso no Telegram!")
+    else:
+        print(f"❌ Falha ao enviar no Telegram: {response.text}")
+        raise Exception("Erro no envio do Telegram")
 
 def run():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            viewport={'width': 1280, 'height': 720},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        )
+        context = browser.new_context(accept_downloads=True)
         page = context.new_page()
         
         try:
-            print("🚀 Acessando a página de 2ª via...")
-            page.goto("https://conac.com.br/2-via-de-boleto/", wait_until="networkidle", timeout=120000)
+            print("🚀 Acessando portal de login da Conac...")
+            page.goto("https://conac.com.br/login-area-do-cliente/", wait_until="domcontentloaded", timeout=90000)
             
-            # Aguarda a renderização de frames dinâmicos do portal
-            time.sleep(5)
+            print("🔢 Digitando CPF...")
+            input_cpf = page.locator("input[type='text'], input:visible").first
+            input_cpf.wait_for(state="visible", timeout=30000)
+            input_cpf.fill(os.environ['CONAC_CPF'])
             
-            print("📧 Inserindo e-mail no formulário...")
+            print("🔘 Clicando em Entrar...")
+            btn_entrar = page.locator("text=Entrar").first
+            btn_entrar.click()
             
-            # Varre a página e eventuais iframes internos em busca do campo de entrada
-            email_field = None
-            for frame in page.frames:
-                locator = frame.locator("input[name*='email' i], input[type='email'], input[placeholder*='email' i], input:visible").first
-                if locator.count() > 0:
-                    email_field = locator
-                    break
-
-            if not email_field:
-                # Fallback: tenta localização direta na janela principal
-                email_field = page.locator("input:visible").first
-
-            email_field.wait_for(state="visible", timeout=45000)
-            email_field.fill(os.environ['CONAC_EMAIL'])
+            print("📋 Clicando em Abrir boleto...")
+            btn_abrir_boleto = page.locator("text=Abrir boleto").first
+            btn_abrir_boleto.wait_for(state="visible", timeout=30000)
+            btn_abrir_boleto.click()
             
-            steps = ["Continuar", "Avançar", "Boleto Eletrônico", "Receber por e-mail"]
-            
-            for step in steps:
-                print(f"👉 Clicando em: {step}")
+            print("📥 Aguardando download do PDF...")
+            with page.expect_download() as download_info:
+                btn_abrir_pdf = page.locator("text=Abrir PDF").first
+                btn_abrir_pdf.wait_for(state="visible", timeout=30000)
+                btn_abrir_pdf.click()
                 
-                # Procura o botão em todos os frames ativos
-                target = None
-                for frame in page.frames:
-                    loc = frame.locator(f"text={step}").first
-                    if loc.count() > 0:
-                        target = loc
-                        break
-                
-                if not target:
-                    target = page.locator(f"text={step}").first
-
-                target.wait_for(state="visible", timeout=30000)
-                target.click()
-                time.sleep(4)
+            download = download_info.value
+            caminho_pdf = "boleto_conac.pdf"
+            download.save_as(caminho_pdf)
+            print(f"✅ Download concluído: {caminho_pdf}")
             
-            print("✅ Sucesso! O boleto foi solicitado para o e-mail.")
+            # Envia o arquivo diretamente para o Telegram
+            enviar_telegram(caminho_pdf)
 
         except Exception as e:
-            print(f"❌ Erro detectado durante a execução: {e}")
-            page.screenshot(path="erro_execucao.png")
+            print(f"❌ Erro durante o processo: {e}")
             raise e
         finally:
             browser.close()
