@@ -1,7 +1,7 @@
 name: Agendamento de Boleto
 on:
   schedule:
-    - cron: '0 9 5 * *' # Roda todo dia 05 às 06:00 AM (Brasília)
+    - cron: '0 9 5 * *' # Todo dia 05 às 06:00 AM (Horário de Brasília)
   workflow_dispatch:
 
 jobs:
@@ -10,9 +10,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.3.0
         with:
           python-version: '3.11'
       - name: Instalar Navegador
