@@ -1,5 +1,6 @@
 import os
 import time
+import re
 from playwright.sync_api import sync_playwright
 
 def run():
@@ -16,13 +17,20 @@ def run():
             page.goto("https://conac.com.br/2-via-de-boleto/", wait_until="domcontentloaded", timeout=120000)
             
             print("🔘 Clicando em Acesso Condomínio...")
-            btn_acesso = page.locator("text=Acesso Condomínio").first
-            btn_acesso.wait_for(state="visible", timeout=60000)
-            btn_acesso.click()
+            # Busca flexível por qualquer elemento que contenha 'Acesso' e 'Condomínio'
+            btn_acesso = page.locator("a, button, div").filter(has_text=re.compile(r"Acesso.*Condom[íi]nio", re.IGNORECASE)).first
             
+            try:
+                btn_acesso.wait_for(state="attached", timeout=15000)
+                btn_acesso.click(force=True)
+            except Exception:
+                print("⚠️ Botão principal não respondeu. Redirecionando direto para a área do cliente...")
+                page.goto("https://areadocliente.conac.com.br/", wait_until="domcontentloaded", timeout=60000)
+
             print("📧 Inserindo e-mail...")
-            input_email = page.locator("input:visible").first
-            input_email.wait_for(state="visible", timeout=60000)
+            # Aguarda e preenche qualquer campo de entrada de texto visível
+            input_email = page.locator("input[type='email'], input[type='text'], input:visible").first
+            input_email.wait_for(state="visible", timeout=45000)
             input_email.fill(os.environ['CONAC_EMAIL'])
             
             steps = ["Continuar", "Avançar", "Boleto Eletrônico", "Receber por e-mail"]
