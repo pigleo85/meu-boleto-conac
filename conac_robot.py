@@ -18,7 +18,7 @@ def run():
             print("🔘 Clicando em Acesso Condomínio...")
             btn_acesso = page.locator("text=Acesso Condomínio").first
             btn_acesso.wait_for(state="visible", timeout=60000)
-            btn_accesso.click()
+            btn_acesso.click()
             
             print("📧 Inserindo e-mail...")
             input_email = page.locator("input:visible").first
