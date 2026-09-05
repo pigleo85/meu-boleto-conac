@@ -1,20 +1,20 @@
 name: Agendamento de Boleto
 on:
   schedule:
-    - cron: '0 9 5 * *' # Roda todo dia 05 às 06:00 AM (Horário de Brasília) - já antecipado para evitar a fila!
-  workflow_dispatch: # Mantém o seu botão no celular ativo
+    - cron: '0 9 5 * *' # Roda todo dia 05 às 06:00 AM (Brasília)
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Dá permissão para o robô atualizar o repositório e evitar o bloqueio de 60 dias
+      contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       - name: Instalar Navegador
         run: |
           pip install playwright
@@ -24,8 +24,7 @@ jobs:
           CONAC_EMAIL: ${{ secrets.CONAC_EMAIL }}
         run: python conac_robot.py
         
-      # 🎯 O TRUQUE: Esse passo faz uma micro-alteração no repositório para mantê-lo ativo
-      - name: Manter Repositório Ativo (Evitar bloqueio de 60 dias)
+      - name: Manter Repositório Ativo
         run: |
           date > ultimo_disparo.txt
           git config --local user.email "actions@github.com"
