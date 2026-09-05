@@ -12,21 +12,45 @@ def run():
         page = context.new_page()
         
         try:
-            print("🚀 Acessando portal do condomínio direto...")
-            # Acessa diretamente a URL final onde o e-mail é digitado
-            page.goto("https://conac.superlogica.net/clients/arena", wait_until="domcontentloaded", timeout=90000)
+            print("🚀 Acessando a página de 2ª via...")
+            page.goto("https://conac.com.br/2-via-de-boleto/", wait_until="networkidle", timeout=120000)
             
-            print("📧 Inserindo e-mail...")
-            # Localiza o campo de entrada e preenche com o segredo configurado
-            input_email = page.locator("input[type='email'], input[type='text'], input:visible").first
-            input_email.wait_for(state="visible", timeout=45000)
-            input_email.fill(os.environ['CONAC_EMAIL'])
+            # Aguarda a renderização de frames dinâmicos do portal
+            time.sleep(5)
+            
+            print("📧 Inserindo e-mail no formulário...")
+            
+            # Varre a página e eventuais iframes internos em busca do campo de entrada
+            email_field = None
+            for frame in page.frames:
+                locator = frame.locator("input[name*='email' i], input[type='email'], input[placeholder*='email' i], input:visible").first
+                if locator.count() > 0:
+                    email_field = locator
+                    break
+
+            if not email_field:
+                # Fallback: tenta localização direta na janela principal
+                email_field = page.locator("input:visible").first
+
+            email_field.wait_for(state="visible", timeout=45000)
+            email_field.fill(os.environ['CONAC_EMAIL'])
             
             steps = ["Continuar", "Avançar", "Boleto Eletrônico", "Receber por e-mail"]
             
             for step in steps:
                 print(f"👉 Clicando em: {step}")
-                target = page.locator(f"text={step}").first
+                
+                # Procura o botão em todos os frames ativos
+                target = None
+                for frame in page.frames:
+                    loc = frame.locator(f"text={step}").first
+                    if loc.count() > 0:
+                        target = loc
+                        break
+                
+                if not target:
+                    target = page.locator(f"text={step}").first
+
                 target.wait_for(state="visible", timeout=30000)
                 target.click()
                 time.sleep(4)
