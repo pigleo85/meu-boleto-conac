@@ -1,6 +1,5 @@
 import os
 import time
-import re
 from playwright.sync_api import sync_playwright
 
 def run():
@@ -13,22 +12,12 @@ def run():
         page = context.new_page()
         
         try:
-            print("🚀 Acessando a página de 2ª via...")
-            page.goto("https://conac.com.br/2-via-de-boleto/", wait_until="domcontentloaded", timeout=120000)
+            print("🚀 Acessando portal do condomínio direto...")
+            # Acessa diretamente a URL final onde o e-mail é digitado
+            page.goto("https://conac.superlogica.net/clients/arena", wait_until="domcontentloaded", timeout=90000)
             
-            print("🔘 Clicando em Acesso Condomínio...")
-            # Busca flexível por qualquer elemento que contenha 'Acesso' e 'Condomínio'
-            btn_acesso = page.locator("a, button, div").filter(has_text=re.compile(r"Acesso.*Condom[íi]nio", re.IGNORECASE)).first
-            
-            try:
-                btn_acesso.wait_for(state="attached", timeout=15000)
-                btn_acesso.click(force=True)
-            except Exception:
-                print("⚠️ Botão principal não respondeu. Redirecionando direto para a área do cliente...")
-                page.goto("https://areadocliente.conac.com.br/", wait_until="domcontentloaded", timeout=60000)
-
             print("📧 Inserindo e-mail...")
-            # Aguarda e preenche qualquer campo de entrada de texto visível
+            # Localiza o campo de entrada e preenche com o segredo configurado
             input_email = page.locator("input[type='email'], input[type='text'], input:visible").first
             input_email.wait_for(state="visible", timeout=45000)
             input_email.fill(os.environ['CONAC_EMAIL'])
