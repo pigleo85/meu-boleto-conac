@@ -37,7 +37,8 @@ def run():
             print("✅ Sucesso! O boleto foi solicitado para o e-mail.")
 
         except Exception as e:
-            print(f"❌ Erro detectado: {e}")
+            print(f"❌ Erro detectado durante a execução: {e}")
+            page.screenshot(path="erro_execucao.png")
             raise e
         finally:
             browser.close()
